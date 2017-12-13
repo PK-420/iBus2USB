@@ -1,2 +1,18 @@
-# iBus2USB
-Arduino code to hookup a FlySky iBus receiver to a Leonardo board to use as a USB joystick to play drone simulators on PC 
+# iBus2USB v1.0
+
+**Target:** Arduino Leonardo Pro Micro
+
+**Prerequisite:** Have the Joystick library included in your "Arduino/libraries" folder*
+  
+**Wiring receiver (~5V):**
+- \+ on RAW pin (near USB port) 
+- \- on GND pin 
+- Signal on Rx1 pin 
+     
+This Sketch takes FlySky i-Bus Serial data from the receiver and turns it into an USB Joystick to use with various drone simulators (Tested in LiftOff and DRL Simulator)
+ 
+Using the ArduinoJoystickLibrary from MHeironimus on GitHub : https://goo.gl/KoNdqs
+ 
+Also inspired by *iBus2PPM* from *povlhp* on GitHub for the iBus data reading loop that I adapted for the Leonardo board. *iBus2PPM* : https://goo.gl/pX7LpG 
+  
+I am using a FlySky FS-i6 transmitter with custom firmware from *benb0jangles* on GitHub, *FlySky-i6-Mod-* : https://goo.gl/3rDx3a which unlocks all 10 channels when using iBus and 8 in PPM, but who wants PPM when almost every receiver can do iBus for the same price.
