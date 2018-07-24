@@ -38,20 +38,8 @@
 **********************************************************************************************/
 
 #include "Joystick.h" 
-
-#define RC_CHAN 10 // Number of assigned/used RC channels, modify according to your transmitter/receiver capabilities (this code should support up to 14)
-#define VARIO // Use this for RC transmitters with 2 AUX pots, comment out if only using AUX switches as buttons
 // #define LED 9 // Error LED pin
-
-#ifdef VARIO // In case transmitter is configured with 2 AUX Pots instead of buttons
-  #define POT1 RC_CHAN-2 // Default : last 2 Auxiliary channels assigned to Potentiometers
-  #define POT2 RC_CHAN-1
-  //                                          HID ID,     Joystick Type,           Btn,       Hat, X,    Y,    Z,   rX,   rY,   rZ,   Rud.,  Thr.,  Acc.,  Brk.,  Str.
-  static Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID, JOYSTICK_TYPE_JOYSTICK, (RC_CHAN - 6), 0, true, true, true, true, true, true, false, false, false, false, false);
-#else
-  static Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID, JOYSTICK_TYPE_JOYSTICK, (RC_CHAN - 4), 0, true, true, true, true, false, false, false, false, false, false, false);
-#endif
-
+#define RC_CHAN 10  // Maximum 14 due to buffer size limitations.
 #define MIN_COMMAND 1000 // Minimum value that the RC can send (Typically 1000us)
 #define MAX_COMMAND 2000 // Maximum value that the RC can send (Typically 2000us)
 #define STICK_CENTER (MIN_COMMAND+((MAX_COMMAND-MIN_COMMAND)/2))
@@ -63,17 +51,26 @@ enum {  // enum defines the order of channels
   THROTTLE,
   YAW,
   AUX1, // First Auxilary, Channel 5, index 4...
+  AUX2,
+  AUX3,
+  AUX4,
+  AUX5,
+  AUX6
 };
 
+//                                            HID ID,     Joystick Type,          Btn,     Hat, X,    Y,    Z,   rX,   rY,   rZ,   Rud., Thr., Acc., Brk.,  Str.
+static Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID, JOYSTICK_TYPE_JOYSTICK, (RC_CHAN-10), 0, true, true, true, true, true, true, true, true, true, true, false);
 static uint8_t ibusIndex = 0; // Index counter, obviously...
 static uint8_t ibus[IBUS_BUFFSIZE] = {0}; // iBus Buffer array
 static uint16_t rcValue[RC_CHAN] = {0}; // RC/Joystick Values array
 
 void setup() {
-//  pinMode(LED, OUTPUT);
   setupJoystick();
   Serial1.begin(115200); // Serial1.(...) for Leonardo duhh
-//  digitalWrite(LED, HIGH); // LED ON Until Proper iBUS RX signal is detected
+  #ifdef LED
+    pinMode(LED, OUTPUT);
+    digitalWrite(LED, HIGH); // LED ON Until Proper iBUS RX signal is detected
+  #endif
 }
 
 void loop() {
@@ -99,10 +96,13 @@ void loop() {
           rcValue[i] = rcVal;
         }
         updateJoystick(); // When RX Frame is done, update Joystick values and send its state to the computer.
-        //digitalWrite(LED, LOW); // OK Packet, Clear LED
+        #ifdef LED
+          digitalWrite(LED, LOW); // OK Packet, Clear LED
+        #endif
       }
-      // else digitalWrite(LED, HIGH); // Checksum Error
-      return;
+      #ifdef LED
+        else digitalWrite(LED, HIGH); // Checksum Error
+      #endif
     }
   }
 }
@@ -112,23 +112,28 @@ void setupJoystick() {
   Joystick.setYAxisRange(MIN_COMMAND, MAX_COMMAND);
   Joystick.setZAxisRange(MIN_COMMAND, MAX_COMMAND);
   Joystick.setRxAxisRange(MIN_COMMAND, MAX_COMMAND);
-  #ifdef VARIO
-    Joystick.setRyAxisRange(MIN_COMMAND, MAX_COMMAND);
-    Joystick.setRzAxisRange(MIN_COMMAND, MAX_COMMAND);
-  #endif
+  Joystick.setRyAxisRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setRzAxisRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setThrottleRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setRudderRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setAcceleratorRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setBrakeRange(MIN_COMMAND, MAX_COMMAND);
   Joystick.begin(false); // Initialize Joystick without autoSend State
 }
 
 void updateJoystick() {
-  Joystick.setRxAxis(rcValue[YAW]);
-  Joystick.setZAxis(rcValue[THROTTLE]);
   Joystick.setXAxis(rcValue[ROLL]);
   Joystick.setYAxis(rcValue[PITCH]);
-  for (uint8_t i = 0; i < RC_CHAN - AUX1; i++) Joystick.setButton(i, rcValue[AUX1 + i] > STICK_CENTER);
-  #ifdef VARIO 
-    Joystick.setRyAxis(rcValue[POT1]);
-    Joystick.setRzAxis(rcValue[POT2]);
-  #endif
+  Joystick.setZAxis(rcValue[THROTTLE]);
+  Joystick.setRxAxis(rcValue[YAW]);
+  Joystick.setThrottle(rcValue[AUX1]);
+  Joystick.setRudder(rcValue[AUX2]);
+  Joystick.setRyAxis(rcValue[AUX3]);
+  Joystick.setRzAxis(rcValue[AUX4]);
+  Joystick.setAccelerator(rcValue[AUX5]);
+  Joystick.setBrake(rcValue[AUX6]);
+  for (uint8_t i = 0; i < RC_CHAN - 10; i++) Joystick.setButton(i, rcValue[i + 10] > STICK_CENTER);
   Joystick.sendState();
 }
+
 
