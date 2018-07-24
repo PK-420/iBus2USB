@@ -5,9 +5,8 @@
 **Prerequisite:** Have the Joystick library included in your "Arduino/libraries" folder*
   
 **Wiring receiver (~5V):**
-- \+ on RAW pin (near USB port) 
-- \- on GND pin 
-- Signal on Rx1 pin 
+
+![Wiring Diagram](https://raw.githubusercontent.com/PK-420/iBus2USB/master/Leonardo.jpg)
      
 This Sketch takes FlySky i-Bus Serial data from the receiver and turns it into an USB Joystick to use with various drone simulators (Tested in LiftOff and DRL Simulator)
  
