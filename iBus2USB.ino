@@ -39,7 +39,7 @@
 
 #include "Joystick.h" 
 // #define LED 9 // Error LED pin
-#define RC_CHAN 14  // Maximum 14 due to buffer size limitations.
+#define RC_CHAN 11  // Maximum 14 due to buffer size limitations. // using 11 here due to Joystick analog axies limitation
 #define MIN_COMMAND 1000 // Minimum value that the RC can send (Typically 1000us)
 #define MAX_COMMAND 2000 // Maximum value that the RC can send (Typically 2000us)
 #define STICK_CENTER (MIN_COMMAND+((MAX_COMMAND-MIN_COMMAND)/2))
@@ -62,8 +62,7 @@ enum {  // enum defines the order of channels
   AUX10,
 };
 
-static Joystick_ Sticks(0x420, JOYSTICK_TYPE_JOYSTICK, 0, 0, true, true, false, false, false, true, false, true); // Left & Right Sticks
-static Joystick_ Aux(0x80, JOYSTICK_TYPE_JOYSTICK, 0, 0, true, true, true, true, true, true, true, true, true, true, false); // 10 Analog Aux inputs
+static Joystick_ Joystick(0x420, JOYSTICK_TYPE_JOYSTICK, 0, 0, true, true, true, true, true, true, true, true, true, true, true); // Maxed out 11 Analog Aux inputs
 //     Joystick_ Name( Joystick ID, Joystick Type, Btn,Hat, X,    Y,    Z,   rX,   rY,   rZ, Rud., Thr., Acc., Brk., Str.
 
 static uint8_t ibusIndex = 0; // Index counter, obviously...
@@ -114,35 +113,33 @@ void loop() {
 }
 
 void setupJoystick() {
-  Sticks.setXAxisRange(MIN_COMMAND, MAX_COMMAND); // Set Sticks ranges
-  Sticks.setYAxisRange(MIN_COMMAND, MAX_COMMAND);
-  Sticks.setThrottleRange(MIN_COMMAND, MAX_COMMAND);
-  Sticks.setRzAxisRange(MIN_COMMAND, MAX_COMMAND);
-  Sticks.begin(false); // Initialize Joystick without autoSend State
-  Aux.setXAxisRange(MIN_COMMAND, MAX_COMMAND); // Set AUX ranges
-  Aux.setYAxisRange(MIN_COMMAND, MAX_COMMAND);
-  Aux.setZAxisRange(MIN_COMMAND, MAX_COMMAND);
-  Aux.setRxAxisRange(MIN_COMMAND, MAX_COMMAND);
-  Aux.setRyAxisRange(MIN_COMMAND, MAX_COMMAND);
-  Aux.setRzAxisRange(MIN_COMMAND, MAX_COMMAND);
-  Aux.setThrottleRange(MIN_COMMAND, MAX_COMMAND);
-  Aux.begin(false); // Initialize Joystick without autoSend State
+  Joystick.setXAxisRange(MIN_COMMAND, MAX_COMMAND); // Set ranges
+  Joystick.setYAxisRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setZAxisRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setRxAxisRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setRyAxisRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setRzAxisRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setThrottleRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setRudderRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setAcceleratorRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setBrakeRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setSteeringRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.begin(false); // Initialize Joystick without autoSend State
 }
 
 void updateJoystick() {
-  Sticks.setXAxis(rcValue[ROLL]);
-  Sticks.setYAxis(rcValue[PITCH]);
-  Sticks.setThrottle(rcValue[THROTTLE]);
-  Sticks.setRzAxis(rcValue[YAW]);
-  Sticks.sendState();
-  Aux.setXAxis(rcValue[AUX1]);
-  Aux.setYAxis(rcValue[AUX2]); 
-  Aux.setZAxis(rcValue[AUX3]);
-  Aux.setRxAxis(rcValue[AUX4]);
-  Aux.setRyAxis(rcValue[AUX5]);
-  Aux.setRzAxis(rcValue[AUX6]);
-  Aux.setThrottle(rcValue[AUX7]);
-  Aux.sendState();
+  Joystick.setXAxis(rcValue[ROLL]);
+  Joystick.setYAxis(rcValue[PITCH]);
+  Joystick.setThrottle(rcValue[THROTTLE]);
+  Joystick.setRzAxis(rcValue[YAW]);
+  Joystick.setZAxis(rcValue[AUX1]);
+  Joystick.setRxAxis(rcValue[AUX2]);
+  Joystick.setRyAxis(rcValue[AUX3]); 
+  Joystick.setRudder(rcValue[AUX4]);
+  Joystick.setAccelerator(rcValue[AUX5]);
+  Joystick.setBrake(rcValue[AUX6]);
+  Joystick.setSteering(rcValue[AUX7]);
+  Joystick.sendState();
 }
 
 
