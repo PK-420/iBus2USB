@@ -12,13 +12,13 @@
   and turns it into an USB Joystick to use with various drone simulators 
   (Tested in LiftOff, VelociDrone and DRL Simulator)
 
-  Using the ArduinoJoystickLibrary from MHeironimus on GitHub : https://goo.gl/KoNdqs
+  Using the ArduinoJoystickLibrary from MHeironimus on GitHub : https://git.io/Jvb7j
   
   Also inspired by iBus2PPM from povlhp on GitHub for the iBus data reading loop 
-  iBus2PPM : https://goo.gl/pX7LpG adapted for Leonardo board.
+  iBus2PPM : https://git.io/Jvb5e adapted for Leonardo board.
 
   I am using a FlySky FS-i6 transmitter with custom firmware from benb0jangles on GitHub,
-  FlySky-i6-Mod- : https://goo.gl/3rDx3a which unlocks all 10 channels when using iBus and 8 in PPM,
+  FlySky-i6-Mod- : https://git.io/Jvb54 which unlocks all 10 channels when using iBus and 8 in PPM,
   but who wants to use PPM when almost every receiver can do iBus for the same price.
   
         Copyright (c) 2017, Patrick Kerr
@@ -78,6 +78,21 @@ void setup() {
   #endif
 }
 
+void setupJoystick() {
+  Joystick.setXAxisRange(MIN_COMMAND, MAX_COMMAND); // Set ranges
+  Joystick.setYAxisRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setZAxisRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setRxAxisRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setRyAxisRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setRzAxisRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setThrottleRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setRudderRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setAcceleratorRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setBrakeRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.setSteeringRange(MIN_COMMAND, MAX_COMMAND);
+  Joystick.begin(false); // Initialize Joystick without autoSend State
+}
+
 void loop() {
   if (Serial1.available()) {
     uint8_t val = Serial1.read();
@@ -94,8 +109,8 @@ void loop() {
       uint16_t chksum = 0xFFFF; // 16 bit Checksum starts at 0xFFFF ...
       for (uint8_t i = 0; i < IBUS_BUFFSIZE - 2; i++) chksum -= ibus[i]; // ... and substracts every received byte (8 bit chunks) from the stream, including the header but not the 2 last bytes.
       uint16_t rxsum = ibus[IBUS_BUFFSIZE - 2] + (ibus[IBUS_BUFFSIZE - 1] << 8);  // Mash the 2 last bytes to form the received 16 bit Checksum, admire the bitshifting trickery to re-order bytes,
-      if (chksum == rxsum) { // Good Packet, Unroll channels                      // Least Significant Byte always received first. Example: Receive "0xDC05" means "0x05DC" = 1500
-        for (uint8_t i = 0; i < RC_CHAN; i++) {
+      if (chksum == rxsum) { // Good Packet                                       // Least Significant Byte always received first. Example: Receive "0xDC05" means "0x05DC" = 1500
+        for (uint8_t i = 0; i < RC_CHAN; i++) { // Put each channel value in its place
           uint16_t rcVal = (ibus[(2*i)+3] << 8) + ibus[(2*i)+2];      // Mash the 2 bytes from each channel together to get 16 bit rcValue, First 2 bytes ignored (0x2040)
           if ((rcVal < MIN_COMMAND) || (rcVal > MAX_COMMAND)) return; // if rcValue is out of bounds (MIN_COMMAND/MAX_COMMAND) the frame is discarded;
           rcValue[i] = rcVal;
@@ -110,21 +125,6 @@ void loop() {
       #endif
     }
   }
-}
-
-void setupJoystick() {
-  Joystick.setXAxisRange(MIN_COMMAND, MAX_COMMAND); // Set ranges
-  Joystick.setYAxisRange(MIN_COMMAND, MAX_COMMAND);
-  Joystick.setZAxisRange(MIN_COMMAND, MAX_COMMAND);
-  Joystick.setRxAxisRange(MIN_COMMAND, MAX_COMMAND);
-  Joystick.setRyAxisRange(MIN_COMMAND, MAX_COMMAND);
-  Joystick.setRzAxisRange(MIN_COMMAND, MAX_COMMAND);
-  Joystick.setThrottleRange(MIN_COMMAND, MAX_COMMAND);
-  Joystick.setRudderRange(MIN_COMMAND, MAX_COMMAND);
-  Joystick.setAcceleratorRange(MIN_COMMAND, MAX_COMMAND);
-  Joystick.setBrakeRange(MIN_COMMAND, MAX_COMMAND);
-  Joystick.setSteeringRange(MIN_COMMAND, MAX_COMMAND);
-  Joystick.begin(false); // Initialize Joystick without autoSend State
 }
 
 void updateJoystick() {
