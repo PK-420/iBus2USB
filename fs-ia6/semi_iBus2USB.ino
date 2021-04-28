@@ -1,25 +1,33 @@
-/** iBus2USB v1.2.1 ****************************************************************************
+/** semi_iBus2USB v1.2.1 ****************************************************************************
 
-  By: Patrick Kerr  
-  Target: Arduino Leonardo Pro Micro
+  By: Patrick Kerr
+  
+  Modified by :
+  Dolie 2021/04/28 - Support semi-ibus from fs-ia6 receiver 
+
+  Target: Arduino Pro Micro
+  Receiver: Flysky FS-ia6
   Prerequisite: Have the Joystick library included in your "Arduino/libraries" folder
   Wiring receiver (~5V):
      # + on RAW pin (near USB port)
      # - on GND pin
      # Signal on Rx1 pin 
           
-  This Sketch takes FlySky i-Bus Serial data from the receiver 
-  and turns it into an USB Joystick to use with various drone simulators 
-  (Tested in LiftOff, VelociDrone and DRL Simulator)
+  This Sketch takes FlySky semi i-Bus Serial data from the fs-ia6 receiver
+  and turns it into an USB Joystick to use with various simulators (Tested in Aerofly RC7).
 
-  Using the ArduinoJoystickLibrary from MHeironimus on GitHub : https://git.io/Jvb7j
+  This is based on darven discovery, on RCgroups : 
+  https://www.rcgroups.com/forums/showthread.php?2711184-Serial-output-from-FS-IA6-%28Semi-I-BUS%29
+
+  Using the ArduinoJoystickLibrary from MHeironimus on GitHub :
+  https://github.com/MHeironimus/ArduinoJoystickLibrary
   
-  Also inspired by iBus2PPM from povlhp on GitHub for the iBus data reading loop 
-  iBus2PPM : https://git.io/Jvb5e adapted for Leonardo board.
+  Also inspired by semi_iBus2PPM from povlhp on GitHub for the semi_iBus data reading loop 
+  semi_iBus2PPM : https://github.com/povlhp/iBus2PPM adapted for Pro Micro board.
 
   I am using a FlySky FS-i6 transmitter with custom firmware from benb0jangles on GitHub,
-  FlySky-i6-Mod- : https://git.io/Jvb54 which unlocks all 10 channels when using iBus and 8 in PPM,
-  but who wants to use PPM when almost every receiver can do iBus for the same price.
+  FlySky-i6-Mod- : https://github.com/benb0jangles/FlySky-i6-Mod- 
+  It unlocks all 14 channels when using semi_iBus and 8 in PPM.
   
         Copyright (c) 2017, Patrick Kerr
         
@@ -43,7 +51,7 @@
 #define MIN_COMMAND 1000 // Minimum value that the RC can send (Typically 1000us)
 #define MAX_COMMAND 2000 // Maximum value that the RC can send (Typically 2000us)
 #define STICK_CENTER (MIN_COMMAND+((MAX_COMMAND-MIN_COMMAND)/2))
-#define IBUS_BUFFSIZE 32 // iBus packet size (2 byte header, space for 14 channels x 2 bytes, 2 byte checksum)
+#define SEMI_IBUS_BUFFSIZE 31 // semi iBus packet size (1 byte header, space for 14 channels x 2 bytes, 2 byte checksum)
 
 enum {  // enum defines the order of channels
   ROLL, // Channel 1 , index 0
@@ -65,8 +73,8 @@ enum {  // enum defines the order of channels
 static Joystick_ Joystick(0x420, JOYSTICK_TYPE_JOYSTICK, 0, 0, true, true, true, true, true, true, true, true, true, true, true); // Maxed out 11 Analog Aux inputs
 //     Joystick_ Name( Joystick ID, Joystick Type, Btn,Hat, X,    Y,    Z,   rX,   rY,   rZ, Rud., Thr., Acc., Brk., Str.
 
-static uint8_t ibusIndex = 0; // Index counter, obviously...
-static uint8_t ibus[IBUS_BUFFSIZE] = {0}; // iBus Buffer array
+static uint8_t semi_ibusIndex = 0; // Index counter, obviously...
+static uint8_t semi_ibus[SEMI_IBUS_BUFFSIZE] = {0}; // semi iBus Buffer array
 static uint16_t rcValue[RC_CHAN] = {0}; // RC/Joystick Values array
 
 void setup() {
@@ -74,7 +82,7 @@ void setup() {
   Serial1.begin(115200); // Serial1.(...) for Leonardo duhh
   #ifdef LED
     pinMode(LED, OUTPUT);
-    digitalWrite(LED, HIGH); // LED ON Until Proper iBUS RX signal is detected
+    digitalWrite(LED, HIGH); // LED ON Until Proper semi_iBus RX signal is detected
   #endif
 }
 
@@ -96,22 +104,21 @@ void setupJoystick() {
 void loop() {
   if (Serial1.available()) {
     uint8_t val = Serial1.read();
-    // Look for 0x2040 as start of packet
-    if (ibusIndex == 0 && val != 0x20) return; // Not 0x20 at index 0, // Skip all and wait another loop for a new byte
-    if (ibusIndex == 1 && val != 0x40) {  // Not the expected 0x40 at index 1, 
-      ibusIndex = 0;                      // so we have to reset the index.
+    // Look for 0x55 as start of packet
+    if (semi_ibusIndex == 0 && val != 0x55) return; // Not 0x55 at index 0, // Skip all and wait another loop for a new byte
+      semi_ibusIndex = 0;                      // so we have to reset the index.
       return; // Skip all and wait next loop for another byte.
     }
-    if (ibusIndex < IBUS_BUFFSIZE) ibus[ibusIndex] = val; // populate ibus array with current byte
-    ibusIndex++; 
-    if (ibusIndex == IBUS_BUFFSIZE) { // End of packet, Verify integrity
-      ibusIndex = 0;
-      uint16_t chksum = 0xFFFF; // 16 bit Checksum starts at 0xFFFF ...
-      for (uint8_t i = 0; i < IBUS_BUFFSIZE - 2; i++) chksum -= ibus[i]; // ... and substracts every received byte (8 bit chunks) from the stream, including the header but not the 2 last bytes.
-      uint16_t rxsum = ibus[IBUS_BUFFSIZE - 2] + (ibus[IBUS_BUFFSIZE - 1] << 8);  // Mash the 2 last bytes to form the received 16 bit Checksum, admire the bitshifting trickery to re-order bytes,
+    if (semi_ibusIndex < SEMI_IBUS_BUFFSIZE) semi_ibus[semi_ibusIndex] = val; // populate semi_ibus array with current byte
+    semi_ibusIndex++; 
+    if (semi_ibusIndex == SEMI_IBUS_BUFFSIZE) { // End of packet, Verify integrity
+      semi_ibusIndex = 0;
+      uint16_t chksum = 0x0000; // 16 bit Checksum starts at 0x0000 ...
+      for (uint8_t i = 1; i < SEMI_IBUS_BUFFSIZE - 2; i++) chksum += semi_ibus[i]; // ... and adds every received byte (8 bit chunks) from the stream, excluding the header and the 2 last bytes.
+      uint16_t rxsum = semi_ibus[SEMI_IBUS_BUFFSIZE - 2] + (semi_ibus[SEMI_IBUS_BUFFSIZE - 1] << 8);  // Mash the 2 last bytes to form the received 16 bit Checksum, admire the bitshifting trickery to re-order bytes,
       if (chksum == rxsum) { // Good Packet                                       // Least Significant Byte always received first. Example: Receive "0xDC05" means "0x05DC" = 1500
         for (uint8_t i = 0; i < RC_CHAN; i++) { // Put each channel value in its place
-          uint16_t rcVal = (ibus[(2*i)+3] << 8) + ibus[(2*i)+2];      // Mash the 2 bytes from each channel together to get 16 bit rcValue, First 2 bytes ignored (0x2040)
+          uint16_t rcVal = (semi_ibus[(2*i)+2] << 8) + semi_ibus[(2*i)+1];      // Mash the 2 bytes from each channel together to get 16 bit rcValue, First header byte ignored (0x55)
           if ((rcVal < MIN_COMMAND) || (rcVal > MAX_COMMAND)) return; // if rcValue is out of bounds (MIN_COMMAND/MAX_COMMAND) the frame is discarded;
           rcValue[i] = rcVal;
         }
