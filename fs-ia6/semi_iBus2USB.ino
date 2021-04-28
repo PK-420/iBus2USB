@@ -106,23 +106,32 @@ void loop() {
     uint8_t val = Serial1.read();
     // Look for 0x55 as start of packet
     if (semi_ibusIndex == 0 && val != 0x55) return; // Not 0x55 at index 0, // Skip all and wait another loop for a new byte
-      semi_ibusIndex = 0;                      // so we have to reset the index.
-      return; // Skip all and wait next loop for another byte.
-    }
+    
     if (semi_ibusIndex < SEMI_IBUS_BUFFSIZE) semi_ibus[semi_ibusIndex] = val; // populate semi_ibus array with current byte
+    
     semi_ibusIndex++; 
+    
     if (semi_ibusIndex == SEMI_IBUS_BUFFSIZE) { // End of packet, Verify integrity
       semi_ibusIndex = 0;
       uint16_t chksum = 0x0000; // 16 bit Checksum starts at 0x0000 ...
-      for (uint8_t i = 1; i < SEMI_IBUS_BUFFSIZE - 2; i++) chksum += semi_ibus[i]; // ... and adds every received byte (8 bit chunks) from the stream, excluding the header and the 2 last bytes.
+      
+      for (uint8_t i = 1; i < SEMI_IBUS_BUFFSIZE - 2; i+=2){
+        chksum += semi_ibus[i] + (semi_ibus[i+1] << 8); // ... and adds every received 2 bytes (16 bit chunks) from the stream, excluding the header and the 2 last bytes (checksum).
+      }
+      
       uint16_t rxsum = semi_ibus[SEMI_IBUS_BUFFSIZE - 2] + (semi_ibus[SEMI_IBUS_BUFFSIZE - 1] << 8);  // Mash the 2 last bytes to form the received 16 bit Checksum, admire the bitshifting trickery to re-order bytes,
-      if (chksum == rxsum) { // Good Packet                                       // Least Significant Byte always received first. Example: Receive "0xDC05" means "0x05DC" = 1500
+                                                                                                      // Least Significant Byte always received first. Example: Receive "0xDC05" means "0x05DC" = 1500
+      if (chksum == rxsum) { // Good Packet
         for (uint8_t i = 0; i < RC_CHAN; i++) { // Put each channel value in its place
           uint16_t rcVal = (semi_ibus[(2*i)+2] << 8) + semi_ibus[(2*i)+1];      // Mash the 2 bytes from each channel together to get 16 bit rcValue, First header byte ignored (0x55)
+          
           if ((rcVal < MIN_COMMAND) || (rcVal > MAX_COMMAND)) return; // if rcValue is out of bounds (MIN_COMMAND/MAX_COMMAND) the frame is discarded;
+          
           rcValue[i] = rcVal;
         }
+        
         updateJoystick(); // When RX Frame is done, update Joystick values and send its state to the computer.
+        
         #ifdef LED
           digitalWrite(LED, LOW); // OK Packet, Clear LED
         #endif
@@ -148,5 +157,3 @@ void updateJoystick() {
   Joystick.setSteering(rcValue[AUX7]);
   Joystick.sendState();
 }
-
-
