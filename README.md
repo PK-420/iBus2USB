@@ -1,4 +1,4 @@
-# iBus2USB v1.0
+# iBus2USB v1.1
 
 **Target:** Arduino Leonardo Pro Micro
 
@@ -17,3 +17,5 @@ Also inspired by *iBus2PPM* from *povlhp* on GitHub for the iBus data reading lo
 I am using a FlySky FS-i6 transmitter with custom firmware from *benb0jangles* on GitHub, *FlySky-i6-Mod-* : https://goo.gl/3rDx3a which unlocks all 10 channels when using iBus and 8 in PPM, but who wants PPM when almost every receiver can do iBus for the same price.
 
 **Suggested receiver** : *Flysky FS82 iBUS AFHDS 2A* Low power, compact, simple to wire up and available on Banggood for cheap : https://goo.gl/7UkU3k
+
+**For FS-IA6 receiver** : use derived sketch in [subfolder](./fs-ia6/). An iBus-like protocol can be extracted from FS-IA6 [(see readme)](./fs-ia6/README.md).
